@@ -3,7 +3,7 @@ I replicated Ng's RYS method and found that duplicating 3 specific layers in Qwe
 
 # llm-circuit-finder
 
-**Duplicate 3 layers. No training. Logical deduction goes from 0.22 → 0.76.**
+**Duplicate 3 layers. No training. Logical deduction goes from ~0.22 → 0.76.~**
 
 This toolkit finds and exploits "reasoning circuits" hidden inside transformer models. The idea: certain contiguous blocks of layers act as indivisible cognitive units. Duplicate them in the forward pass — same weights, no training, no merging — and the model gets measurably smarter on specific capabilities.
 
@@ -13,20 +13,41 @@ Built on [David Ng's RYS method](https://dnhkng.github.io/posts/rys/) and extend
 
 ### Devstral-Small-2-24B: Layers 12, 13, 14 duplicated once
 
-Validated on standard benchmarks via [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) at n=50:
+I ran the full tests on a H200 instance on Vast.ai and compare devstral base against the surgery model, and the results are in: So the surgery is doing something real and specific: it's boosting mathematical reasoning and causal reasoning but at the cost of instruction following and code generation. The model thinks harder but follows directions less precisely.
 
-| Benchmark | Base | +3 layers | Change |
-|-----------|------|-----------|--------|
-| BBH Logical Deduction | 0.22 | **0.76** | **+245%** |
-| GSM8K (strict) | 0.48 | **0.64** | +33% |
-| MBPP (code gen) | 0.72 | **0.78** | +8% |
-| GSM8K (flexible) | 0.82 | **0.86** | +5% |
-| BBH Navigate | 0.96 | **0.98** | +2% |
-| BBH Date Understanding | 0.82 | **0.84** | +2% |
-| BBH Causal Judgement | 0.66 | 0.66 | — |
-| IFEval (strict) | 0.68 | 0.68 | — |
+On the results folder you can see the results under eval_base and eval_surgery.
+I also added to the repo vastai_rys_eval.sh which is the script used to run the whole wacamole in Vast.ai.
+vastai instance created with 
 
-**Average improvement: +8% across all metrics. Nothing degraded.**
+vastai create instance somenumberhere   --image vastai/base-image:cuda-12.8.1-cudnn-devel-ubuntu22.04   --disk 80 --direct --ssh
+
+
+=================================================================================
+lm_eval Results Comparison
+=================================================================================
+Metric                                              base  rys_12_15 Δ(last-first)
+---------------------------------------------------------------------------------
+bbh/causal_judgement [exact_match]                0.5775     0.6364     +0.0588
+
+bbh/date_understanding [exact_match]              0.9440     0.9000     -0.0440
+
+bbh/logical_deduction_five_objects [exact_match]     0.7440     0.7320     -0.0120
+
+bbh/navigate [exact_match]                        0.9600     0.9440     -0.0160
+
+gsm8k_cot [flexible-extract]                      0.8650     0.8787     +0.0136
+gsm8k_cot [strict-match]                          0.8408     0.8704     +0.0296
+
+ifeval [inst_level_loose_acc]                     0.7446     0.7206     -0.0240
+ifeval [inst_level_strict_acc]                    0.6990     0.6595     -0.0396
+ifeval [prompt_level_loose_acc]                   0.6728     0.6488     -0.0240
+ifeval [prompt_level_strict_acc]                  0.6229     0.5767     -0.0462
+
+mbpp [pass_at_1]                                  0.7000     0.6700     -0.0300
+=================================================================================
+
+Average (all metrics)                             0.7610     0.7488     -0.0122
+
 
 ### Qwen2.5-Coder-32B: Layers 7, 8, 9 duplicated once
 
